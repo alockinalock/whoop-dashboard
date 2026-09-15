@@ -1,0 +1,12 @@
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Backend
+backend/target/
+backend/*.jsonl
+backend/*.csv
+
+# OS
+.DS_Store
+.vscode/
