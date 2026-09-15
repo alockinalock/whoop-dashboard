@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import './App.css'
+import overrideFieldImage from './assets/OverrideField.png'
 
 type ModuleId = 'match' | 'field' | 'velocity' | 'acceleration' | 'pose' | 'errors' | 'power' | 'telemetry' | 'sensors'
 
@@ -23,6 +24,21 @@ const defaultModules: DashboardModule[] = [
 
 const storageKey = 'whoop-dashboard-module-order'
 
+function VEXOverrideField({ robotX, robotY, robotHeading }: { robotX: number; robotY: number; robotHeading: number }) {
+  return (
+    <div className="field-container">
+      <img src={overrideFieldImage} alt="VEX Override field" className="field-image" />
+      <svg className="field-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {/* Robot position indicator */}
+        <g transform={`translate(${robotX} ${robotY}) rotate(${robotHeading})`}>
+          <circle cx="0" cy="0" r="3" fill="none" stroke="#00ff00" strokeWidth="0.5" />
+          <line x1="0" y1="0" x2="0" y2="-5" stroke="#00ff00" strokeWidth="0.5" />
+        </g>
+      </svg>
+    </div>
+  )
+}
+
 function ComparisonChart({ labels }: { labels: string[] }) {
   return (
     <div className="chart-wrap">
@@ -42,7 +58,7 @@ function ModuleContent({ id }: { id: ModuleId }): ReactNode {
     case 'match':
       return <div className="status-content"><strong>Practice run</strong><span>Not connected to robot controller</span><div className="status-row"><span>Runtime</span><b>02:14:36</b></div></div>
     case 'field':
-      return <div className="field-content"><div className="field-grid"><span className="field-robot"><i /></span><span className="field-heading">NE 42 deg</span></div><div className="field-readout"><span>X <b>1.82 m</b></span><span>Y <b>0.64 m</b></span><span>Heading <b>42 deg</b></span></div></div>
+      return <div className="field-content"><VEXOverrideField robotX={72} robotY={72} robotHeading={42} /><div className="field-readout"><span>X <b>1.82 m</b></span><span>Y <b>0.64 m</b></span><span>Heading <b>42 deg</b></span></div></div>
     case 'velocity':
       return <><ComparisonChart labels={['0s', '2s', '4s', '6s', '8s']} /><div className="metric-row"><span>kV <b>0.018</b></span><span>kA <b>0.002</b></span></div></>
     case 'acceleration':
