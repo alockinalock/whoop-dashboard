@@ -26,13 +26,19 @@ const storageKey = 'whoop-dashboard-module-order'
 
 const FIELD_SIZE_IN = 144
 
-function VEXOverrideField({ robotX, robotY, robotHeading }: { robotX: number; robotY: number; robotHeading: number }) {
+type RobotPose = {
+  x: number
+  y: number
+  heading: number
+}
+
+function VEXOverrideField({ x, y, heading }: RobotPose) {
   return (
     <div className="field-container">
       <img src={overrideFieldImage} alt="VEX Override field" className="field-image" />
       <svg className="field-overlay" viewBox={`0 0 ${FIELD_SIZE_IN} ${FIELD_SIZE_IN}`} preserveAspectRatio="none">
         {/* Robot position indicator */}
-        <g transform={`translate(${robotX} ${robotY}) rotate(${robotHeading})`}>
+        <g transform={`translate(${x} ${y}) rotate(${heading})`}>
           <circle cx="0" cy="0" r="3.5" fill="none" stroke="#00ff00" strokeWidth="0.6" />
           <line x1="0" y1="0" x2="0" y2="-6" stroke="#00ff00" strokeWidth="0.6" />
         </g>
@@ -59,8 +65,10 @@ function ModuleContent({ id }: { id: ModuleId }): ReactNode {
   switch (id) {
     case 'match':
       return <div className="status-content"><strong>Practice run</strong><span>Not connected to robot controller</span><div className="status-row"><span>Runtime</span><b>02:14:36</b></div></div>
-    case 'field':
-      return <div className="field-content"><VEXOverrideField robotX={72} robotY={72} robotHeading={42} /><div className="field-readout"><span>X <b>72 in</b></span><span>Y <b>72 in</b></span><span>Heading <b>42 deg</b></span></div></div>
+    case 'field': {
+      const robotPose: RobotPose = { x: 100, y: 30, heading: -42 }
+      return <div className="field-content"><VEXOverrideField {...robotPose} /><div className="field-readout"><span>X <b>{robotPose.x} in</b></span><span>Y <b>{robotPose.y} in</b></span><span>Heading <b>{robotPose.heading} deg</b></span></div></div>
+    }
     case 'velocity':
       return <><ComparisonChart labels={['0s', '2s', '4s', '6s', '8s']} /><div className="metric-row"><span>kV <b>0.018</b></span><span>kA <b>0.002</b></span></div></>
     case 'acceleration':
