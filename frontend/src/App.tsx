@@ -1,6 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
 import './App.css'
-import overrideFieldImage from './assets/OverrideField.png'
+import sampleCsv from '../../pp_test2.csv?raw'
+import { FieldTrajectory } from './components/FieldTrajectory'
+import { PoseChart } from './components/PoseChart'
+import { parsePoseCsv, type PoseSample } from './data/poseCsv'
 
 type ModuleId = 'match' | 'field' | 'velocity' | 'acceleration' | 'pose' | 'errors' | 'power' | 'telemetry' | 'sensors'
 
@@ -12,11 +15,11 @@ type DashboardModule = {
 
 const defaultModules: DashboardModule[] = [
   { id: 'match', label: 'Match status', eyebrow: 'Control' },
-  { id: 'field', label: 'Field position', eyebrow: 'Position' },
-  { id: 'velocity', label: 'Velocity tuning', eyebrow: 'Graphs' },
-  { id: 'acceleration', label: 'Acceleration tuning', eyebrow: 'Graphs' },
-  { id: 'pose', label: 'Pose tracking', eyebrow: 'Graphs' },
-  { id: 'errors', label: 'Error terms', eyebrow: 'Graphs' },
+  { id: 'field', label: 'Robot trajectory', eyebrow: 'Pose data' },
+  { id: 'velocity', label: 'Position over time', eyebrow: 'Pose data' },
+  { id: 'acceleration', label: 'Heading over time', eyebrow: 'Pose data' },
+  { id: 'pose', label: 'Pose sample summary', eyebrow: 'Pose data' },
+  { id: 'errors', label: 'Target comparison', eyebrow: 'Pose data' },
   { id: 'power', label: 'Voltage and power', eyebrow: 'Telemetry' },
   { id: 'telemetry', label: 'Telemetry log', eyebrow: 'Data' },
   { id: 'sensors', label: 'Sensors', eyebrow: 'Hardware' },
@@ -24,59 +27,20 @@ const defaultModules: DashboardModule[] = [
 
 const storageKey = 'whoop-dashboard-module-order'
 
-const FIELD_SIZE_IN = 144
-
-type RobotPose = {
-  x: number
-  y: number
-  heading: number
-}
-
-function VEXOverrideField({ x, y, heading }: RobotPose) {
-  return (
-    <div className="field-container">
-      <img src={overrideFieldImage} alt="VEX Override field" className="field-image" />
-      <svg className="field-overlay" viewBox={`0 0 ${FIELD_SIZE_IN} ${FIELD_SIZE_IN}`} preserveAspectRatio="none">
-        {/* Robot position indicator */}
-        <g transform={`translate(${x} ${y}) rotate(${heading})`}>
-          <circle cx="0" cy="0" r="3.5" fill="none" stroke="#00ff00" strokeWidth="0.6" />
-          <line x1="0" y1="0" x2="0" y2="-6" stroke="#00ff00" strokeWidth="0.6" />
-        </g>
-      </svg>
-    </div>
-  )
-}
-
-function ComparisonChart({ labels }: { labels: string[] }) {
-  return (
-    <div className="chart-wrap">
-      <svg className="chart" viewBox="0 0 320 100" role="img" aria-label="Mock comparison chart">
-        <path className="chart-gridline" d="M0 20H320M0 50H320M0 80H320" />
-        <polyline className="chart-target" points="0,72 38,62 76,64 114,42 152,49 190,29 228,35 266,17 320,23" />
-        <polyline className="chart-actual" points="0,79 38,66 76,71 114,51 152,58 190,40 228,41 266,29 320,35" />
-      </svg>
-      <div className="chart-labels">{labels.map((label) => <span key={label}>{label}</span>)}</div>
-      <div className="chart-legend"><span><i className="legend-target" /> Target</span><span><i className="legend-actual" /> Actual</span></div>
-    </div>
-  )
-}
-
-function ModuleContent({ id }: { id: ModuleId }): ReactNode {
+function ModuleContent({ id, samples }: { id: ModuleId; samples: PoseSample[] }): ReactNode {
   switch (id) {
     case 'match':
       return <div className="status-content"><strong>Practice run</strong><span>Not connected to robot controller</span><div className="status-row"><span>Runtime</span><b>02:14:36</b></div></div>
-    case 'field': {
-      const robotPose: RobotPose = { x: 100, y: 30, heading: -42 }
-      return <div className="field-content"><VEXOverrideField {...robotPose} /><div className="field-readout"><span>X <b>{robotPose.x} in</b></span><span>Y <b>{robotPose.y} in</b></span><span>Heading <b>{robotPose.heading} deg</b></span></div></div>
-    }
+    case 'field':
+      return <FieldTrajectory samples={samples} />
     case 'velocity':
-      return <><ComparisonChart labels={['0s', '2s', '4s', '6s', '8s']} /><div className="metric-row"><span>kV <b>0.018</b></span><span>kA <b>0.002</b></span></div></>
+      return <PoseChart kind="position" samples={samples} />
     case 'acceleration':
-      return <><ComparisonChart labels={['0s', '1s', '2s', '3s', '4s']} /><div className="metric-row"><span>kA <b>0.002</b></span><span>Peak <b>1.84 m/s2</b></span></div></>
+      return <PoseChart kind="heading" samples={samples} />
     case 'pose':
-      return <><ComparisonChart labels={['0s', '5s', '10s', '15s', '20s']} /><div className="metric-row"><span>Position error <b>0.08 m</b></span><span>Heading error <b>2.4 deg</b></span></div></>
+      return <div className="pose-summary"><span>Samples <b>{samples.length}</b></span><span>Duration <b>{samples.at(-1)?.elapsedSeconds.toFixed(2)} s</b></span></div>
     case 'errors':
-      return <div className="error-list"><div><span>Translational</span><b>0.08 m</b><i style={{ width: '24%' }} /></div><div><span>Heading</span><b>2.4 deg</b><i style={{ width: '38%' }} /></div><div><span>PID contribution</span><b>0.31</b><i style={{ width: '56%' }} /></div></div>
+      return <p className="unavailable-data">This CSV contains measured pose only. Target data is not available.</p>
     case 'power':
       return <div className="power-content"><div className="power-number"><span>Battery voltage</span><strong>12.41 V</strong></div><div className="power-number"><span>Motor output</span><strong>38%</strong></div><div className="power-bar"><i /></div><small>Mock values until controller link is active</small></div>
     case 'telemetry':
@@ -90,6 +54,30 @@ function App() {
   const [modules, setModules] = useState(defaultModules)
   const [isEditing, setIsEditing] = useState(false)
   const [draggedId, setDraggedId] = useState<ModuleId | null>(null)
+  const [samples, setSamples] = useState(() => parsePoseCsv(sampleCsv))
+  const [csvFilename, setCsvFilename] = useState('pp_test2.csv')
+  const [csvError, setCsvError] = useState('')
+
+  const loadCsv = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0]
+    event.currentTarget.value = ''
+    if (!file) return
+
+    try {
+      const parsedSamples = parsePoseCsv(await file.text())
+      setSamples(parsedSamples)
+      setCsvFilename(file.name)
+      setCsvError('')
+    } catch (error) {
+      setCsvError(error instanceof Error ? error.message : 'Could not load this CSV file.')
+    }
+  }
+
+  const restoreSample = () => {
+    setSamples(parsePoseCsv(sampleCsv))
+    setCsvFilename('pp_test2.csv')
+    setCsvError('')
+  }
 
   useEffect(() => {
     const savedOrder = window.localStorage.getItem(storageKey)
@@ -135,7 +123,12 @@ function App() {
           <h1>Robot dashboard</h1>
         </div>
         <div className="topbar-actions">
-          <span className="connection-status"><span className="status-dot mock" /> Mock data</span>
+          <span className="connection-status" title={csvFilename}><span className="status-dot" /> {csvFilename} · {samples.length} poses</span>
+          <label className="csv-upload-button">
+            Load CSV
+            <input type="file" accept=".csv,text/csv" onChange={loadCsv} aria-label="Load a pose CSV file" />
+          </label>
+          <button className="reset-button" type="button" onClick={restoreSample}>Restore sample</button>
           <button className={`edit-button${isEditing ? ' active' : ''}`} type="button" onClick={() => setIsEditing(!isEditing)}>
             {isEditing ? 'Done arranging' : 'Arrange modules'}
           </button>
@@ -143,6 +136,7 @@ function App() {
       </header>
 
       <section className="dashboard-content">
+        {csvError && <p className="csv-error" role="alert">{csvError}</p>}
         <div className="dashboard-heading">
           <div>
             <p className="kicker">PRACTICE SESSION / 02:14:36</p>
@@ -154,7 +148,10 @@ function App() {
         {isEditing && <p className="arrange-hint">Drag a module by its handle to change your dashboard layout.</p>}
 
         <div className={`module-grid${isEditing ? ' is-editing' : ''}`}>
-          {modules.map((module) => (
+          {modules.map((module) => {
+            const usesCsvData = ['field', 'velocity', 'acceleration', 'pose', 'errors'].includes(module.id)
+
+            return (
             <article
               className={`module module-${module.id}${draggedId === module.id ? ' is-dragging' : ''}`}
               key={module.id}
@@ -171,10 +168,11 @@ function App() {
                 </div>
                 {isEditing && <span className="drag-handle" aria-label={`Drag ${module.label}`}>::</span>}
               </div>
-              <div className="module-body"><ModuleContent id={module.id} /></div>
-              <footer><span className="module-live">MOCK DATA</span><span>Awaiting robot link</span></footer>
+              <div className="module-body"><ModuleContent id={module.id} samples={samples} /></div>
+              <footer><span className="module-live">{usesCsvData ? 'CSV DATA' : 'MOCK DATA'}</span><span>{usesCsvData ? `${samples.length} pose samples` : 'Awaiting robot link'}</span></footer>
             </article>
-          ))}
+            )
+          })}
         </div>
       </section>
     </main>
