@@ -4,6 +4,8 @@ frontend/dist/
 
 # Backend
 backend/target/
+backend/dist/
+backend/recordings/
 backend/*.jsonl
 backend/*.csv
 
