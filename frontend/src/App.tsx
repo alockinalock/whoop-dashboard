@@ -1,11 +1,11 @@
-import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
+import { useState, type ChangeEvent, type ReactNode } from 'react'
 import './App.css'
 import sampleCsv from '../../pp_test2.csv?raw'
 import { FieldTrajectory } from './components/FieldTrajectory'
 import { PoseChart } from './components/PoseChart'
 import { parsePoseCsv, type PoseSample } from './data/poseCsv'
 
-type ModuleId = 'match' | 'field' | 'velocity' | 'acceleration' | 'pose' | 'errors' | 'power' | 'telemetry' | 'sensors'
+type ModuleId = 'match' | 'field' | 'position' | 'velocity' | 'acceleration' | 'pose' | 'errors' | 'power' | 'telemetry' | 'sensors'
 
 type DashboardModule = {
   id: ModuleId
@@ -16,8 +16,9 @@ type DashboardModule = {
 const defaultModules: DashboardModule[] = [
   { id: 'match', label: 'Match status', eyebrow: 'Control' },
   { id: 'field', label: 'Robot trajectory', eyebrow: 'Pose data' },
-  { id: 'velocity', label: 'Position over time', eyebrow: 'Pose data' },
-  { id: 'acceleration', label: 'Heading over time', eyebrow: 'Pose data' },
+  { id: 'position', label: 'Position over time', eyebrow: 'Pose data' },
+  { id: 'velocity', label: 'Velocity', eyebrow: 'Pose data' },
+  { id: 'acceleration', label: 'Acceleration', eyebrow: 'Pose data' },
   { id: 'pose', label: 'Pose sample summary', eyebrow: 'Pose data' },
   { id: 'errors', label: 'Target comparison', eyebrow: 'Pose data' },
   { id: 'power', label: 'Voltage and power', eyebrow: 'Telemetry' },
@@ -27,16 +28,42 @@ const defaultModules: DashboardModule[] = [
 
 const storageKey = 'whoop-dashboard-module-order'
 
+function isModuleId(value: unknown): value is ModuleId {
+  return typeof value === 'string' && defaultModules.some((module) => module.id === value)
+}
+
+function loadSavedModules(): DashboardModule[] {
+  const savedOrder = window.localStorage.getItem(storageKey)
+  if (!savedOrder) return defaultModules
+
+  try {
+    const parsedOrder: unknown = JSON.parse(savedOrder)
+    if (!Array.isArray(parsedOrder)) throw new Error('Saved module order must be an array.')
+
+    const order = [...new Set(parsedOrder.filter(isModuleId))]
+    const sortedModules = order
+      .map((id) => defaultModules.find((module) => module.id === id))
+      .filter((module): module is DashboardModule => Boolean(module))
+    const missingModules = defaultModules.filter((module) => !order.includes(module.id))
+    return [...sortedModules, ...missingModules]
+  } catch {
+    window.localStorage.removeItem(storageKey)
+    return defaultModules
+  }
+}
+
 function ModuleContent({ id, samples }: { id: ModuleId; samples: PoseSample[] }): ReactNode {
   switch (id) {
     case 'match':
       return <div className="status-content"><strong>Practice run</strong><span>Not connected to robot controller</span><div className="status-row"><span>Runtime</span><b>02:14:36</b></div></div>
     case 'field':
       return <FieldTrajectory samples={samples} />
-    case 'velocity':
+    case 'position':
       return <PoseChart kind="position" samples={samples} />
+    case 'velocity':
+      return <PoseChart kind="velocity" samples={samples} />
     case 'acceleration':
-      return <PoseChart kind="heading" samples={samples} />
+      return <PoseChart kind="acceleration" samples={samples} />
     case 'pose':
       return <div className="pose-summary"><span>Samples <b>{samples.length}</b></span><span>Duration <b>{samples.at(-1)?.elapsedSeconds.toFixed(2)} s</b></span></div>
     case 'errors':
@@ -51,7 +78,7 @@ function ModuleContent({ id, samples }: { id: ModuleId; samples: PoseSample[] })
 }
 
 function App() {
-  const [modules, setModules] = useState(defaultModules)
+  const [modules, setModules] = useState(loadSavedModules)
   const [isEditing, setIsEditing] = useState(false)
   const [draggedId, setDraggedId] = useState<ModuleId | null>(null)
   const [samples, setSamples] = useState(() => parsePoseCsv(sampleCsv))
@@ -78,22 +105,6 @@ function App() {
     setCsvFilename('pp_test2.csv')
     setCsvError('')
   }
-
-  useEffect(() => {
-    const savedOrder = window.localStorage.getItem(storageKey)
-    if (!savedOrder) return
-
-    try {
-      const order = JSON.parse(savedOrder) as ModuleId[]
-      const sortedModules = order
-        .map((id) => defaultModules.find((module) => module.id === id))
-        .filter((module): module is DashboardModule => Boolean(module))
-      const missingModules = defaultModules.filter((module) => !order.includes(module.id))
-      setModules([...sortedModules, ...missingModules])
-    } catch {
-      window.localStorage.removeItem(storageKey)
-    }
-  }, [])
 
   const moveModule = (targetId: ModuleId) => {
     if (!draggedId || draggedId === targetId) return

@@ -275,8 +275,13 @@ button { font: 600 12px var(--mono); cursor: pointer; }
 .field-heading { position: absolute; right: 4px; bottom: 3px; color: #1976d2; font: 10px var(--mono); }
 .field-readout { display: flex; flex-direction: column; gap: 5px; color: #757575; font: 11px var(--mono); }
 .field-readout b { color: #212121; font-weight: 400; }
+.pose-chart { width: 100%; min-width: 0; }
+.pose-chart-controls { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: 2px; }
+.pose-chart-controls button { padding: 3px 8px; border: 1px solid #bdbdbd; border-radius: 2px; background: #fff; color: #616161; font: 400 11px var(--sans); cursor: pointer; }
+.pose-chart-controls button[aria-pressed="true"] { border-color: #1976d2; background: #e3f2fd; color: #1565c0; }
+.pose-chart-controls button:focus-visible { outline: 2px solid #1976d2; outline-offset: 2px; }
 .echarts-chart { width: 100%; min-width: 0; height: 220px; }
-.module-field, .module-velocity, .module-acceleration { min-height: 320px; }
+.module-field, .module-position, .module-velocity, .module-acceleration { min-height: 320px; }
 .pose-summary { display: flex; flex-direction: column; gap: 10px; width: 100%; color: #757575; font-size: 12px; }
 .pose-summary span { display: flex; justify-content: space-between; }
 .pose-summary b { color: #212121; font-weight: 500; }

@@ -23,6 +23,18 @@ type MotionSeries = {
   accelerationMagnitude: Array<number | null>
 }
 
+function smoothMovingAverage(values: Array<number | null>): Array<number | null> {
+  return values.map((value, index) => {
+    if (value === null) return null
+
+    const window = values
+      .slice(Math.max(0, index - 1), Math.min(values.length, index + 2))
+      .filter((sample): sample is number => sample !== null)
+
+    return window.reduce((sum, sample) => sum + sample, 0) / window.length
+  })
+}
+
 function calculateMotion(samples: Array<Pick<PoseSample, 'timestampMs' | 'x' | 'y'>>): MotionSeries {
   const calculateVelocity = (axis: 'x' | 'y') => samples.map<number | null>((sample, index) => {
     if (index === 0) {
@@ -43,8 +55,8 @@ function calculateMotion(samples: Array<Pick<PoseSample, 'timestampMs' | 'x' | '
     return duration > 0 ? (next[axis] - previous[axis]) / (duration / 1000) : null
   })
 
-  const velocityX = calculateVelocity('x')
-  const velocityY = calculateVelocity('y')
+  const velocityX = smoothMovingAverage(calculateVelocity('x'))
+  const velocityY = smoothMovingAverage(calculateVelocity('y'))
   const velocityMagnitude = velocityX.map<number | null>((x, index) => {
     const y = velocityY[index]
     return x !== null && y !== null ? Math.hypot(x, y) : null
@@ -74,8 +86,8 @@ function calculateMotion(samples: Array<Pick<PoseSample, 'timestampMs' | 'x' | '
     return previous !== null && next !== null && duration > 0 ? (next - previous) / (duration / 1000) : null
   })
 
-  const accelerationX = calculateAcceleration(velocityX)
-  const accelerationY = calculateAcceleration(velocityY)
+  const accelerationX = smoothMovingAverage(calculateAcceleration(velocityX))
+  const accelerationY = smoothMovingAverage(calculateAcceleration(velocityY))
   const accelerationMagnitude = accelerationX.map<number | null>((x, index) => {
     const y = accelerationY[index]
     return x !== null && y !== null ? Math.hypot(x, y) : null
